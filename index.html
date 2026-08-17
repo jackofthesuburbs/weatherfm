@@ -8,14 +8,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;1,300;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 <style>
+  
   :root{
     --dark:#0b0f10; --dark-rgb:11,15,16;
     --light:#e9e4d6; --light-rgb:233,228,214;
     --blue:#5b8aa6; --green:#6f8f6a; --yellow:#d9b25c;
   }
+  
   html.night{--bg:var(--dark); --bg-rgb:var(--dark-rgb); --fg:var(--light); --fg-rgb:var(--light-rgb);}
+  
   html.day{--bg:var(--light); --bg-rgb:var(--light-rgb); --fg:var(--dark); --fg-rgb:var(--dark-rgb);}
   *{box-sizing:border-box;}
+  
   html,body{margin:0;padding:0;height:100%;overflow:hidden;
     background:var(--bg);color:var(--fg);
     font-family:Arial, Helvetica, sans-serif;
@@ -29,6 +33,7 @@
     pointer-events:none;opacity:0;transition:opacity 1.4s ease, color 1.6s ease;
     text-transform:lowercase;
   }
+  
   #wordmark.show{opacity:1;}
 
   #topLeftStack{
@@ -45,6 +50,7 @@
     opacity:0;transform:translateY(-6px);
     transition:opacity 1s ease, transform 1s ease, background 1.6s ease, border-color 1.6s ease;
   }
+  
   #weatherPanel.show{opacity:1;transform:translateY(0);}
   #weatherPanel .row{display:flex;justify-content:space-between;gap:14px;}
   #weatherPanel .label{color:rgba(var(--fg-rgb),0.62);/*text-transform:uppercase*/;font-size:11px;letter-spacing:0.12em;}
@@ -61,6 +67,7 @@
     opacity:0;transition:opacity 1s ease, border-color 0.3s ease, background 1.6s ease;
     color:var(--fg);
   }
+  
   #muteBtn.show{opacity:1;}
   #muteBtn:focus-visible{outline:2px solid var(--yellow);outline-offset:2px;}
   #muteBtn svg{width:16px;height:16px;}
@@ -73,6 +80,7 @@
     opacity:0;transition:opacity 1s ease, border-color 0.3s ease, background 1.6s ease;
     color:var(--fg);font-family:Arial, Helvetica, sans-serif;font-size:13px;
   }
+  
   #infoBtn.show{opacity:1;}
   #infoBtn:focus-visible{outline:2px solid var(--yellow);outline-offset:2px;}
   #infoBtn[aria-pressed="true"]{border-color:var(--yellow);}
@@ -85,13 +93,16 @@
     color:rgba(var(--fg-rgb),0.8);
     transition:background 1.6s ease, border-color 1.6s ease;
   }
+  
   #infoPanel.open{display:block;}
 
   #credit{
     position:fixed;right:20px;bottom:20px;font-size:10px;letter-spacing:0.05em;
     opacity:0;transition:opacity 1s ease, color 1.6s ease;
   }
+  
   #credit.show{opacity:1;}
+  
   #credit a{color:rgba(var(--fg-rgb),0.55);text-decoration:none;border-bottom:1px solid rgba(var(--fg-rgb),0.3);
     transition:color 0.3s ease, border-color 0.3s ease;}
   #credit a:hover, #credit a:focus-visible{color:var(--fg);border-color:var(--fg);}
@@ -101,22 +112,29 @@
     background:rgba(6,8,9,0.72);backdrop-filter:blur(10px);
     transition:opacity 0.9s ease;z-index:10;padding:24px;
   }
+  
   #modal.hidden{opacity:0;pointer-events:none;}
+  
   #modalCard{max-width:400px;text-align:center;padding:8px;}
+  
   #modalCard h1{
     font-family:'Fraunces',serif;font-style:italic;font-weight:300;
     font-size:42px;margin:0 0 18px;letter-spacing:0.01em;color:var(--light);
     text-transform:lowercase;
   }
   #modalCard p{font-size:13px;line-height:1.7;color:rgba(233,228,214,0.62);margin:0 0 26px;letter-spacing:0.02em;}
+  
   #beginBtn{
     font-family:Arial, Helvetica, sans-serif;font-size:12px;letter-spacing:0.1em;
     text-transform:lowercase;background:transparent;color:var(--light);
     border:1px solid rgba(233,228,214,0.62);padding:12px 30px;border-radius:2px;
     cursor:pointer;transition:border-color 0.3s ease, background 0.3s ease;
   }
+  
   #beginBtn:hover, #beginBtn:focus-visible{border-color:var(--yellow);background:rgba(217,178,92,0.08);}
+  
   #beginBtn:disabled{opacity:0.5;cursor:default;}
+  
   #locNote{margin-top:16px;font-size:10px;color:rgba(233,228,214,0.62);opacity:0.8;min-height:14px;letter-spacing:0.05em;}
 
   @media (prefers-reduced-motion: reduce){
@@ -171,7 +189,7 @@
 </div>
 
 <script>
-/* ---------- utils ---------- */
+/* utils */
 const clamp01 = v => Math.max(0, Math.min(1, v));
 const rand = (a,b) => a + Math.random()*(b-a);
 
@@ -183,11 +201,12 @@ function mulberry32(a){
     return ((t ^ t>>>14) >>> 0) / 4294967296;
   };
 }
+
 function seedFromCoords(lat, lon){
   return (Math.floor((lat+90)*10000) ^ Math.floor((lon+180)*10000)) >>> 0;
 }
 
-/* ---------- gradient noise (perlin-like) ---------- */
+/* gradient noise */
 function makeNoise(seed){
   const rnd = mulberry32(seed);
   const grad = new Map();
@@ -208,6 +227,7 @@ function makeNoise(seed){
     return lerp(ix0,ix1,sy);
   };
 }
+
 let noise2D = makeNoise(1);
 function fbm(nx, ny, octaves=5){
   let amp=0.5, freq=1, sum=0, norm=0;
@@ -219,10 +239,11 @@ function fbm(nx, ny, octaves=5){
   return sum/norm;
 }
 
-/* ---------- terrain rendering ---------- */
+/* terrain rendering */
 const canvas = document.getElementById('terrain');
 const ctx = canvas.getContext('2d');
 let W, H, dpr;
+
 function resize(){
   dpr = Math.min(window.devicePixelRatio||1, 2);
   W = window.innerWidth; H = window.innerHeight;
@@ -251,6 +272,7 @@ function paletteColor(tPos){
   const b=Math.round(c0.c[2]+(c1.c[2]-c0.c[2])*lt);
   return `rgb(${r},${g},${b})`;
 }
+
 function marchCell(h00,h10,h11,h01,x0,y0,x1,y1,threshold){
   const corners=[{h:h00,p:[x0,y0]},{h:h10,p:[x1,y0]},{h:h11,p:[x1,y1]},{h:h01,p:[x0,y1]}];
   const pts=[];
@@ -313,7 +335,7 @@ function drawTerrain(now){
 }
 requestAnimationFrame(drawTerrain);
 
-/* ---------- weather ---------- */
+/* weather */
 function describeTemp(t){ return t<0?'freezing':t<9?'cold':t<15?'cool':t<21?'mild':t<27?'warm':'hot'; }
 function describeSky(c){ return c<20?'clear':c<50?'partly cloudy':c<80?'cloudy':'overcast'; }
 function describePrecip(p){ return p<=0?'dry':p<0.5?'damp':p<4?'rain':'heavy rain'; }
@@ -347,10 +369,11 @@ async function getLocation(){
   });
 }
 
-/* ---------- clock / day-night ---------- */
+/* clock / day-night */
 let locationTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 let sunriseHM = null, sunsetHM = null;
 let isDaytime = true;
+
 function extractHM(iso){ return iso.slice(11,16); }
 
 function updateClock(){
@@ -378,7 +401,7 @@ function updateClock(){
   document.documentElement.classList.toggle('night', !isDay);
 }
 
-/* ---------- audio engine ---------- */
+/* audio engine */
 let warmth=0.45, cloudiness=0.4, precipIntensity=0, windiness=0.2, humidityAmt=0.5;
 let currentTempC = 15;
 let padTimer, leadTimer, clickTimer, stabTimer, pluckTimer, noiseSwellTimer, muted=false;
@@ -390,18 +413,18 @@ let limiter, masterGain, reverb, chorus, padFilter, leadFilter, pad, lead,
     pluckFilter, pluckSend, pluck,
     noiseAutoFilter, noiseTone, noisePanner, noiseWetGain, noiseDryGain, noiseGain, noise;
 
-/* six five-note scales, keyed to the same temperature categories the
-   weather panel already uses — dark/tense at the cold end, lifted/bright
-   at the hot end. pad and lead both read from this table, so they're
-   always tonally anchored to the same key. */
+/* 6 x 5-note scales, keyed to samew temperature categories as weather panel, 
+    dark/tense at the cold end, lifted/bright at the hot end.
+    Pad and lead both read from this table, so tonally anchored to the same key. */
 const scalesByTemp = {
-  freezing: [0,1,5,7,8],   // tense, semitone-heavy — most melancholic
+  freezing: [0,1,5,7,8],   // tense, semitone-heavy — melancholic
   cold:     [0,3,5,7,10],  // minor pentatonic
   cool:     [0,2,3,7,9],   // dorian-flavoured pentatonic
-  mild:     [0,2,5,7,9],   // suspended, neither major nor minor
+  mild:     [0,2,5,7,9],   // suspended
   warm:     [0,2,4,7,9],   // major pentatonic
-  hot:      [0,2,4,6,9],   // lydian-flavoured — brightest, most lifted
+  hot:      [0,2,4,6,9],   // lydian-flavoured — bright, lifted
 };
+
 function currentScale(){
   return scalesByTemp[describeTemp(currentTempC)] || scalesByTemp.mild;
 }
@@ -428,7 +451,7 @@ function setupAudio(){
   }).connect(leadFilter);
   lead.volume.value = -12;
 
-  // percussion voice 1 — wooden knock: MembraneSynth, triangle oscillator,
+  // percussion 1 — wooden knock: MembraneSynth, triangle oscillator,
   // very short tight pitch drop. tuned to the same scale as the pluck voice
   clickFilter = new Tone.Filter({frequency:3200, type:'lowpass'}).connect(masterGain);
   clickSend = new Tone.Gain(0.2).connect(reverb);
@@ -441,7 +464,7 @@ function setupAudio(){
   click.connect(clickSend);
   click.volume.value = -14;
 
-  // percussion voice 2 — textural noise stab, filter centre tracks precipitation
+  // percussion 2 — textural noise stab, filter centre tracks precipitation
   stabFilter = new Tone.Filter({frequency:1200, type:'bandpass', Q:1.4}).connect(masterGain);
   stabSend = new Tone.Gain(0.18).connect(reverb);
   stab = new Tone.NoiseSynth({
@@ -452,8 +475,7 @@ function setupAudio(){
   stab.connect(stabSend);
   stab.volume.value = -16;
 
-  // percussion voice 3 — plucked tonal stab, drawn from the same scale as
-  // the melody/chords
+  // percussion 3 — plucked tonal stab, drawn from the same scale as melody/chords
   pluckFilter = new Tone.Filter({frequency:2600, type:'lowpass'}).connect(masterGain);
   pluckSend = new Tone.Gain(0.12).connect(reverb);
   pluck = new Tone.PluckSynth({ attackNoise:1, dampening:3200, resonance:0.82 });
@@ -461,9 +483,9 @@ function setupAudio(){
   pluck.connect(pluckSend);
   pluck.volume.value = -13;
 
-  // pink noise: swept by an LFO-driven filter (rate -> wind, tonal range ->
-  // warmth), coloured by a resonant tone filter tuned to the current key's
-  // root, and now panned by wind too — an AutoPanner sits before the
+  // pink noise: swept by LFO-driven filter (rate -> wind, tonal range ->
+  // warmth), coloured by resonant tone filter tuned to current key's
+  // root, panned by wind too — AutoPanner sits before
   // wet/dry split so both paths move together. calm air barely moves;
   // windy air sweeps the noise layer widely left-right.
   noiseAutoFilter = new Tone.AutoFilter({
@@ -490,9 +512,9 @@ function applyToAudio(){
   leadFilter.frequency.rampTo(900 + warmth*3200, 5);
   reverb.wet.rampTo(0.22 + cloudiness*0.45, 5);       // cloud cover -> reverb wetness
   chorus.depth = clamp01(0.1 + humidityAmt*0.6);       // humidity -> chorus/detune thickness
-  noiseAutoFilter.frequency.rampTo(0.005 + windiness*0.013, 4); // wind -> sweep rate; even at max wind, period stays ~50s+
+  noiseAutoFilter.frequency.rampTo(0.005 + windiness*0.013, 4); // wind -> sweep rate; at max wind, period stays ~50s+
   noiseAutoFilter.baseFrequency = 550 + warmth*400;               // warmth -> tonal range, floor raised well clear of mud
-  const sweepWidth = (1.3 + cloudiness*1.1) * (1 - humidityAmt*0.8); // humidity flattens the sweep, but never fully to static
+  const sweepWidth = (1.3 + cloudiness*1.1) * (1 - humidityAmt*0.8); // humidity flattens sweep, but never fully static
   noiseAutoFilter.octaves = sweepWidth;                            // cloud sets base width, humidity collapses it
   const rootOctave = 1 + Math.round(warmth*3);                    // widened — matches schedulePad's register below
   const rootFreq = Tone.Frequency('D'+rootOctave).toFrequency();
@@ -502,11 +524,10 @@ function applyToAudio(){
   paletteBias = warmth;
 }
 
-/* ---------- pink noise: humidity-driven presence ----------
-   at low humidity it's barely there — short, soft pops separated by long
-   near-silent gaps. at high humidity the pops lengthen and the gaps
-   shrink until it reads as a fuller, steadier presence — but the ceiling
-   itself is capped modestly. */
+/* pink noise: humidity-driven presence -
+   at low humidity barely there — short, soft pops separated by long gaps. 
+   high humidity the pops lengthen and gaps shrink until it reads as fuller presence — but ceiling
+   itself is capped. */
 function scheduleNoiseSwell(){
   clearTimeout(noiseSwellTimer);
   const ceiling = 0.02 + humidityAmt*0.11;
@@ -521,25 +542,14 @@ function scheduleNoiseSwell(){
   }, rampUp*1000);
 }
 
-/* ---------- percussion: 3 independent voices ----------
-   each voice has its own clock and its own per-hit probability of firing.
-   at zero precipitation the probabilities sit around even odds, so the
-   three voices land unevenly against each other — present, but irregular
-   and not synced. as precipitation rises the probabilities climb toward
-   certainty and the intervals tighten, so all three converge into a dense,
-   near-constant layer together.
-
-   storminess (precipitation x wind, both high at once) additionally
-   unlocks a texture none of the individual dials reach alone: the stab
-   voice occasionally fires a fast double-hit "flutter" only when it's
-   genuinely stormy, not just wet or just windy. */
+/* percussion: 3 independent voices */
 function scheduleClick(){
   clearTimeout(clickTimer);
   const minI = 0.5 + (1-precipIntensity)*1.6;
   const maxI = 1.4 + (1-precipIntensity)*2.8;
   if(Math.random() < 0.55 + precipIntensity*0.45){
     const scale = currentScale();
-    const octaveBase = 5 + Math.round(warmth*3); // widened — was 5+round(warmth), span 1 -> now span 3
+    const octaveBase = 5 + Math.round(warmth*3);
     const semis = scale[Math.floor(Math.random()*scale.length)];
     const note = Tone.Frequency('D'+octaveBase).transpose(semis).toNote();
     click.triggerAttackRelease(note, '16n', Tone.now());
@@ -606,8 +616,7 @@ function schedulePad(){
     const octaveJump = Math.random() < spreadChance ? (Math.random()<0.5?12:24) : 0;
     notes.push(Tone.Frequency(rootMidi+semis+octaveJump, 'midi').toNote());
   }
-  // storminess (rain x wind, both high at once) adds a sub-octave doubling
-  // note for real low-end weight — a texture no single weather dial reaches
+  
   const storminess = precipIntensity * windiness;
   if(storminess > 0.45){
     notes.push(Tone.Frequency(rootMidi-12, 'midi').toNote());
@@ -645,7 +654,7 @@ function updateParamsFromWeather(c){
   applyToAudio();
 }
 
-/* ---------- mute ---------- */
+/* mute */
 const muteBtn = document.getElementById('muteBtn');
 muteBtn.addEventListener('click', ()=>{
   muted = !muted;
@@ -655,7 +664,7 @@ muteBtn.addEventListener('click', ()=>{
   muteBtn.style.borderColor = muted ? 'var(--yellow)' : 'rgba(var(--fg-rgb),0.22)';
 });
 
-/* ---------- info toggle ---------- */
+/* info toggle */
 const infoBtn = document.getElementById('infoBtn');
 const infoPanel = document.getElementById('infoPanel');
 const infoIcon = document.getElementById('infoIcon');
@@ -666,7 +675,7 @@ infoBtn.addEventListener('click', ()=>{
   infoBtn.setAttribute('aria-label', open ? 'Close project info' : 'About this project');
 });
 
-/* ---------- init flow ---------- */
+/* init flow */
 const modal = document.getElementById('modal');
 const beginBtn = document.getElementById('beginBtn');
 const locNote = document.getElementById('locNote');
