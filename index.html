@@ -206,7 +206,6 @@ function seedFromCoords(lat, lon){
   return (Math.floor((lat+90)*10000) ^ Math.floor((lon+180)*10000)) >>> 0;
 }
 
-/* gradient noise */
 function makeNoise(seed){
   const rnd = mulberry32(seed);
   const grad = new Map();
@@ -239,7 +238,6 @@ function fbm(nx, ny, octaves=5){
   return sum/norm;
 }
 
-/* terrain rendering */
 const canvas = document.getElementById('terrain');
 const ctx = canvas.getContext('2d');
 let W, H, dpr;
@@ -335,7 +333,7 @@ function drawTerrain(now){
 }
 requestAnimationFrame(drawTerrain);
 
-/* weather */
+
 function describeTemp(t){ return t<0?'freezing':t<9?'cold':t<15?'cool':t<21?'mild':t<27?'warm':'hot'; }
 function describeSky(c){ return c<20?'clear':c<50?'partly cloudy':c<80?'cloudy':'overcast'; }
 function describePrecip(p){ return p<=0?'dry':p<0.5?'damp':p<4?'rain':'heavy rain'; }
@@ -369,7 +367,7 @@ async function getLocation(){
   });
 }
 
-/* clock / day-night */
+
 let locationTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 let sunriseHM = null, sunsetHM = null;
 let isDaytime = true;
@@ -401,7 +399,7 @@ function updateClock(){
   document.documentElement.classList.toggle('night', !isDay);
 }
 
-/* audio engine */
+
 let warmth=0.45, cloudiness=0.4, precipIntensity=0, windiness=0.2, humidityAmt=0.5;
 let currentTempC = 15;
 let padTimer, leadTimer, clickTimer, stabTimer, pluckTimer, noiseSwellTimer, muted=false;
@@ -413,16 +411,14 @@ let limiter, masterGain, reverb, chorus, padFilter, leadFilter, pad, lead,
     pluckFilter, pluckSend, pluck,
     noiseAutoFilter, noiseTone, noisePanner, noiseWetGain, noiseDryGain, noiseGain, noise;
 
-/* 6 x 5-note scales, keyed to samew temperature categories as weather panel, 
-    dark/tense at the cold end, lifted/bright at the hot end.
-    Pad and lead both read from this table, so tonally anchored to the same key. */
+
 const scalesByTemp = {
-  freezing: [0,1,5,7,8],   // tense, semitone-heavy — melancholic
-  cold:     [0,3,5,7,10],  // minor pentatonic
-  cool:     [0,2,3,7,9],   // dorian-flavoured pentatonic
-  mild:     [0,2,5,7,9],   // suspended
-  warm:     [0,2,4,7,9],   // major pentatonic
-  hot:      [0,2,4,6,9],   // lydian-flavoured — bright, lifted
+  freezing: [0,1,5,7,8],
+  cold:     [0,3,5,7,10],
+  cool:     [0,2,3,7,9],
+  mild:     [0,2,5,7,9],
+  warm:     [0,2,4,7,9],
+  hot:      [0,2,4,6,9],
 };
 
 function currentScale(){
@@ -451,8 +447,6 @@ function setupAudio(){
   }).connect(leadFilter);
   lead.volume.value = -12;
 
-  // percussion 1 — wooden knock: MembraneSynth, triangle oscillator,
-  // very short tight pitch drop. tuned to the same scale as the pluck voice
   clickFilter = new Tone.Filter({frequency:3200, type:'lowpass'}).connect(masterGain);
   clickSend = new Tone.Gain(0.2).connect(reverb);
   click = new Tone.MembraneSynth({
@@ -464,7 +458,6 @@ function setupAudio(){
   click.connect(clickSend);
   click.volume.value = -14;
 
-  // percussion 2 — textural noise stab, filter centre tracks precipitation
   stabFilter = new Tone.Filter({frequency:1200, type:'bandpass', Q:1.4}).connect(masterGain);
   stabSend = new Tone.Gain(0.18).connect(reverb);
   stab = new Tone.NoiseSynth({
@@ -475,7 +468,6 @@ function setupAudio(){
   stab.connect(stabSend);
   stab.volume.value = -16;
 
-  // percussion 3 — plucked tonal stab, drawn from the same scale as melody/chords
   pluckFilter = new Tone.Filter({frequency:2600, type:'lowpass'}).connect(masterGain);
   pluckSend = new Tone.Gain(0.12).connect(reverb);
   pluck = new Tone.PluckSynth({ attackNoise:1, dampening:3200, resonance:0.82 });
@@ -483,11 +475,6 @@ function setupAudio(){
   pluck.connect(pluckSend);
   pluck.volume.value = -13;
 
-  // pink noise: swept by LFO-driven filter (rate -> wind, tonal range ->
-  // warmth), coloured by resonant tone filter tuned to current key's
-  // root, panned by wind too — AutoPanner sits before
-  // wet/dry split so both paths move together. calm air barely moves;
-  // windy air sweeps the noise layer widely left-right.
   noiseAutoFilter = new Tone.AutoFilter({
     frequency: 0.02, baseFrequency: 550, octaves: 1.6,
     filter: {type:'bandpass', Q:0.5}
@@ -510,24 +497,20 @@ function applyToAudio(){
   if(!audioReady) return;
   padFilter.frequency.rampTo(350 + warmth*2800, 5);
   leadFilter.frequency.rampTo(900 + warmth*3200, 5);
-  reverb.wet.rampTo(0.22 + cloudiness*0.45, 5);       // cloud cover -> reverb wetness
-  chorus.depth = clamp01(0.1 + humidityAmt*0.6);       // humidity -> chorus/detune thickness
-  noiseAutoFilter.frequency.rampTo(0.005 + windiness*0.013, 4); // wind -> sweep rate; at max wind, period stays ~50s+
-  noiseAutoFilter.baseFrequency = 550 + warmth*400;               // warmth -> tonal range, floor raised well clear of mud
-  const sweepWidth = (1.3 + cloudiness*1.1) * (1 - humidityAmt*0.8); // humidity flattens sweep, but never fully static
-  noiseAutoFilter.octaves = sweepWidth;                            // cloud sets base width, humidity collapses it
-  const rootOctave = 1 + Math.round(warmth*3);                    // widened — matches schedulePad's register below
+  reverb.wet.rampTo(0.22 + cloudiness*0.45, 5);
+  chorus.depth = clamp01(0.1 + humidityAmt*0.6);
+  noiseAutoFilter.frequency.rampTo(0.005 + windiness*0.013, 4);
+  noiseAutoFilter.baseFrequency = 550 + warmth*400;
+  const sweepWidth = (1.3 + cloudiness*1.1) * (1 - humidityAmt*0.8);
+  noiseAutoFilter.octaves = sweepWidth;
+  const rootOctave = 1 + Math.round(warmth*3);
   const rootFreq = Tone.Frequency('D'+rootOctave).toFrequency();
-  noiseTone.frequency.rampTo(rootFreq, 3);                        // resonance tracks the current key's root
-  noisePanner.frequency.rampTo(0.015 + windiness*0.12, 4);        // wind -> pan sweep rate: calm barely moves, windy sweeps faster
-  noisePanner.depth.rampTo(0.22 + windiness*0.55, 4);             // wind -> pan width: calm stays near-centred, windy swings wide
+  noiseTone.frequency.rampTo(rootFreq, 3);
+  noisePanner.frequency.rampTo(0.015 + windiness*0.12, 4);
+  noisePanner.depth.rampTo(0.22 + windiness*0.55, 4);
   paletteBias = warmth;
 }
 
-/* pink noise: humidity-driven presence -
-   at low humidity barely there — short, soft pops separated by long gaps. 
-   high humidity the pops lengthen and gaps shrink until it reads as fuller presence — but ceiling
-   itself is capped. */
 function scheduleNoiseSwell(){
   clearTimeout(noiseSwellTimer);
   const ceiling = 0.02 + humidityAmt*0.11;
@@ -542,7 +525,6 @@ function scheduleNoiseSwell(){
   }, rampUp*1000);
 }
 
-/* percussion: 3 independent voices */
 function scheduleClick(){
   clearTimeout(clickTimer);
   const minI = 0.5 + (1-precipIntensity)*1.6;
@@ -579,7 +561,7 @@ function schedulePluck(){
   const maxI = 1.2 + (1-precipIntensity)*3.0;
   if(Math.random() < 0.5 + precipIntensity*0.5){
     const scale = currentScale();
-    const octaveBase = 3 + Math.round(warmth*3); // widened — was 4+round(warmth*2), span 2 -> now span 3
+    const octaveBase = 3 + Math.round(warmth*3);
     const semis = scale[Math.floor(Math.random()*scale.length)];
     const note = Tone.Frequency('D'+octaveBase).transpose(semis).toNote();
     pluck.triggerAttack(note, Tone.now());
@@ -590,11 +572,11 @@ function schedulePluck(){
 function scheduleLead(){
   clearTimeout(leadTimer);
   const scale = currentScale();
-  const octaveBase = 1 + Math.round(warmth*4); // widened — was 2+round(warmth*3), span 3 -> now span 4
+  const octaveBase = 1 + Math.round(warmth*4);
   const semis = scale[Math.floor(Math.random()*scale.length)];
   const note = Tone.Frequency('D'+octaveBase).transpose(semis).toNote();
   lead.triggerAttackRelease(note, rand(1.5,4), Tone.now(), rand(0.25,0.6));
-  const dayNightFactor = isDaytime ? 0.68 : 1.3; // fuller (more frequent) by day
+  const dayNightFactor = isDaytime ? 0.68 : 1.3;
   const minI = (2.5 - windiness*1.3) * dayNightFactor;
   const maxI = (11 - windiness*5.5) * dayNightFactor;
   leadTimer = setTimeout(scheduleLead, rand(Math.max(1,minI), Math.max(2,maxI))*1000);
@@ -603,13 +585,10 @@ function scheduleLead(){
 function schedulePad(){
   clearTimeout(padTimer);
   const scale = currentScale();
-  const octaveBase = 1 + Math.round(warmth*3); // widened — was 1+round(warmth*2), span 2 -> now span 3
+  const octaveBase = 1 + Math.round(warmth*3);
   const rootMidi = Tone.Frequency('D'+octaveBase).toMidi();
-  const chordSize = 3 + Math.round(cloudiness*2); // cloud cover -> notes stacked
+  const chordSize = 3 + Math.round(cloudiness*2);
   const notes = [];
-  // voicing shape now also depends on cloud cover: clear skies have a
-  // chance of throwing a note up an octave or two (open/spread voicing);
-  // overcast skies keep every note clustered near the root (tight voicing)
   const spreadChance = (1 - cloudiness) * 0.6;
   for(let i=0;i<chordSize;i++){
     const semis = scale[Math.floor(Math.random()*scale.length)];
@@ -621,7 +600,7 @@ function schedulePad(){
   if(storminess > 0.45){
     notes.push(Tone.Frequency(rootMidi-12, 'midi').toNote());
   }
-  const changeInterval = 22 - windiness*11; // wind -> pace of chord change
+  const changeInterval = 22 - windiness*11;
   pad.triggerAttackRelease(notes, changeInterval+rand(2,6), Tone.now(), 0.22+cloudiness*0.15);
   padTimer = setTimeout(schedulePad, Math.max(9,changeInterval)*1000);
 }
@@ -654,7 +633,7 @@ function updateParamsFromWeather(c){
   applyToAudio();
 }
 
-/* mute */
+
 const muteBtn = document.getElementById('muteBtn');
 muteBtn.addEventListener('click', ()=>{
   muted = !muted;
@@ -664,7 +643,7 @@ muteBtn.addEventListener('click', ()=>{
   muteBtn.style.borderColor = muted ? 'var(--yellow)' : 'rgba(var(--fg-rgb),0.22)';
 });
 
-/* info toggle */
+
 const infoBtn = document.getElementById('infoBtn');
 const infoPanel = document.getElementById('infoPanel');
 const infoIcon = document.getElementById('infoIcon');
@@ -675,7 +654,7 @@ infoBtn.addEventListener('click', ()=>{
   infoBtn.setAttribute('aria-label', open ? 'Close project info' : 'About this project');
 });
 
-/* init flow */
+
 const modal = document.getElementById('modal');
 const beginBtn = document.getElementById('beginBtn');
 const locNote = document.getElementById('locNote');
